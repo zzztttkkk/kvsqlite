@@ -7,7 +7,7 @@ import (
 )
 
 type Tx struct {
-	ctx context.Context
+	db  *DB
 	raw *sql.Tx
 }
 
@@ -75,11 +75,28 @@ func (tx *Tx) delone(ctx context.Context, key string) error {
 		{
 			return tx.String().delone(ctx, key)
 		}
+	case KeyKindHash:
+		{
+			return tx.Hash(key).remove(ctx)
+		}
+	case KeyKindList:
+		{
+			return tx.List(key).remove(ctx)
+		}
 	}
-	return nil
+	return fmt.Errorf("kvsqlite: del failed, %s", key)
 }
 
 func (tx *Tx) Del(ctx context.Context, keys ...string) (int, []error) {
+	if len(keys) < 1 {
+		return 0, nil
+	}
+
+	stmt, err := tx.stmt(ctx, `delete from kv_index where key = ?`)
+	if err != nil {
+		return 0, []error{err}
+	}
+
 	c := 0
 	var errors []error
 	for _, key := range keys {
@@ -87,7 +104,20 @@ func (tx *Tx) Del(ctx context.Context, keys ...string) (int, []error) {
 			errors = append(errors, err)
 			continue
 		}
+		_, err = stmt.ExecContext(ctx, key)
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
 		c++
 	}
 	return c, errors
+}
+
+func (tx *Tx) stmt(ctx context.Context, query string) (*sql.Stmt, error) {
+	stmt, err := tx.db.stmt(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	return tx.raw.StmtContext(ctx, stmt), nil
 }

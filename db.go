@@ -11,8 +11,9 @@ import (
 )
 
 type DB struct {
-	lock sync.Mutex
-	raw  *sql.DB
+	lock  sync.Mutex
+	raw   *sql.DB
+	stmts map[string]*sql.Stmt
 }
 
 var (
@@ -34,7 +35,7 @@ func OpenDB(fp string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	obj := &DB{raw: db}
+	obj := &DB{raw: db, stmts: map[string]*sql.Stmt{}}
 	instances[fp] = obj
 	return obj, nil
 }
@@ -116,6 +117,23 @@ func (db *DB) Scope(ctx context.Context, fnc func(ctx context.Context, tx Tx) er
 			panic(fmt.Errorf("kvsqlite: commit failed, %s", commit_err))
 		}
 	}()
-	err = fnc(ctx, Tx{raw: sqltx})
+	err = fnc(ctx, Tx{raw: sqltx, db: db})
 	return err
+}
+
+func (db *DB) stmt(ctx context.Context, query string) (*sql.Stmt, error) {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+
+	sv, ok := db.stmts[query]
+	if ok {
+		return sv, nil
+	}
+
+	sv, err := db.raw.PrepareContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	db.stmts[query] = sv
+	return sv, nil
 }
