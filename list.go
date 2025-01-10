@@ -313,10 +313,12 @@ func (handle _ListHandle) fixidx(ctx context.Context, idx int) (int, int, error)
 	if err != nil {
 		return 0, 0, err
 	}
+
 	size, err := handle.Size(ctx)
 	if err != nil {
 		return 0, 0, err
 	}
+
 	if idx < 0 {
 		idx = size + idx
 		if idx < 0 {
@@ -430,10 +432,6 @@ func (handle _ListHandle) reidx(ctx context.Context, size int, lidx int, ridx in
 	return insert_storage_idx_begin, consume_tmps()
 }
 
-func (handle _ListHandle) remove(ctx context.Context) error {
-	return handle.tx.exec(ctx, `delete from kv_list where key = ?`, handle.key)
-}
-
 func (handle _ListHandle) InsertAfter(ctx context.Context, idx int, vals ...string) error {
 	size, idx, err := handle.fixidx(ctx, idx)
 	if err != nil {
@@ -458,4 +456,8 @@ func (handle _ListHandle) InsertAfter(ctx context.Context, idx int, vals ...stri
 		bsi += KeySetp
 	}
 	return nil
+}
+
+func (handle _ListHandle) remove(ctx context.Context) error {
+	return handle.tx.exec(ctx, `delete from kv_list where key = ?`, handle.key)
 }

@@ -4,8 +4,8 @@ github.com/ncruces/julianday v1.0.0 h1:fH0OKwa7NWvniGQtxdJRxAgkBMolni2BjDHaWTxqt
 github.com/ncruces/julianday v1.0.0/go.mod h1:Dusn2KvZrrovOMJuOt0TNXL6tB7U2E8kvza5fFc9G7g=
 github.com/tetratelabs/wazero v1.8.2 h1:yIgLR/b2bN31bjxwXHD8a3d+BogigR952csSDdLYEv4=
 github.com/tetratelabs/wazero v1.8.2/go.mod h1:yAI0XTsMBhREkM/YDAK/zNou3GoiAce1P6+rp/wQhjs=
-github.com/zzztttkkk/lion v0.2.9 h1:cz6q6jTkXUUOzlHW7jf9JcbDDzky5IxYpHLmNEFfEGA=
-github.com/zzztttkkk/lion v0.2.9/go.mod h1:Ecu8eS1rcDgCogjE8mSOh2ViTNdUM//afiq/BxcyfAc=
+github.com/zzztttkkk/lion v0.2.10 h1:8RObeFTB9qGiuoW5vOFV1oFesL+yLplOlrDlmt0zhwg=
+github.com/zzztttkkk/lion v0.2.10/go.mod h1:Ecu8eS1rcDgCogjE8mSOh2ViTNdUM//afiq/BxcyfAc=
 golang.org/x/sys v0.28.0 h1:Fksou7UEQUWlKvIdsqzJmUmCX3cZuD2+P3XyyzwMhlA=
 golang.org/x/sys v0.28.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
 golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
