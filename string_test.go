@@ -10,12 +10,7 @@ var db *DB
 
 func init() {
 	var err error
-	db, err = OpenDB("./kv.db")
-	if err != nil {
-		panic(err)
-	}
-
-	err = db.Init(context.Background())
+	db, err = OpenDB(context.Background(), "./kv.db")
 	if err != nil {
 		panic(err)
 	}

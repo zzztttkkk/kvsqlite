@@ -21,7 +21,7 @@ var (
 	instances = map[string]*DB{}
 )
 
-func OpenDB(fp string) (*DB, error) {
+func OpenDB(ctx context.Context, fp string) (*DB, error) {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -36,11 +36,15 @@ func OpenDB(fp string) (*DB, error) {
 		return nil, err
 	}
 	obj := &DB{raw: db, stmts: map[string]*sql.Stmt{}}
+	err = obj._Init(ctx)
+	if err != nil {
+		return nil, err
+	}
 	instances[fp] = obj
 	return obj, nil
 }
 
-func (db *DB) Init(ctx context.Context) error {
+func (db *DB) _Init(ctx context.Context) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
