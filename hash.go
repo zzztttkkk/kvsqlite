@@ -3,6 +3,8 @@ package kvsqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strconv"
 )
 
 type _HashHandle struct {
@@ -21,8 +23,25 @@ func (handle _HashHandle) Get(ctx context.Context, filed string) (string, error)
 		return "", err
 	}
 	var val string
-	err = row.Scan(val)
+	err = row.Scan(&val)
 	return val, err
+}
+
+func (handle _HashHandle) Incr(cxt context.Context, filed string, amount int64) (int64, error) {
+	prevs, err := handle.Get(cxt, filed)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return amount, handle.Set(cxt, filed, fmt.Sprintf("%d", amount))
+		} else {
+			return 0, err
+		}
+	}
+	num, err := strconv.ParseInt(prevs, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("kvsqlite: prev value is  not a int, %s", prevs)
+	}
+	num += amount
+	return num, handle.Set(cxt, filed, fmt.Sprintf("%d", num))
 }
 
 func (handle _HashHandle) Exists(ctx context.Context, filed string) (bool, error) {

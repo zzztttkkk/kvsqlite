@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"slices"
+	"strings"
 )
 
 type _ListHandle struct {
@@ -40,6 +42,23 @@ const (
 	OrderDesc
 )
 
+func (kind _OrderKind) String() string {
+	switch kind {
+	case OrderAsc:
+		{
+			return "asc"
+		}
+	case OrderDesc:
+		{
+			return "desc"
+		}
+	default:
+		{
+			panic("")
+		}
+	}
+}
+
 func _OneColScan[T any](rows *sql.Rows, pagesize int) ([]T, error) {
 	var lst []T
 	if pagesize > 0 {
@@ -71,7 +90,7 @@ func (handle _ListHandle) Size(ctx context.Context) (int, error) {
 	return lenv, err
 }
 
-func (handle _ListHandle) Get(ctx context.Context, page int, pagesize int, order _OrderKind) ([]string, error) {
+func (handle _ListHandle) Page(ctx context.Context, page int, pagesize int, order _OrderKind) ([]string, error) {
 	if page < 1 || pagesize < 1 {
 		return nil, fmt.Errorf("kvsqlite: bad page/pagesize, %d, %d", page, pagesize)
 	}
@@ -93,20 +112,21 @@ func (handle _ListHandle) Get(ctx context.Context, page int, pagesize int, order
 }
 
 func (handle _ListHandle) _ReadByCursor(ctx context.Context, order _OrderKind, pagesize int, previdx sql.Null[int]) ([]string, sql.Null[int], error) {
-	var order_name = "asc"
+	if pagesize < 1 {
+		pagesize = 10
+	}
 	var cmp_op = ">"
 	if order == OrderDesc {
-		order_name = "desc"
 		cmp_op = "<"
 	}
 
 	var _sql string
 	var args []any
 	if previdx.Valid {
-		_sql = fmt.Sprintf(`select idx, value from kv_list where key = ? and idx %s ? order by idx %s limit ?`, cmp_op, order_name)
+		_sql = fmt.Sprintf(`select idx, value from kv_list where key = ? and idx %s ? order by idx %s limit ?`, cmp_op, order)
 		args = []any{handle.key, previdx.V, pagesize}
 	} else {
-		_sql = fmt.Sprintf(`select idx, value from kv_list where key = ? order by idx %s limit ?`, order_name)
+		_sql = fmt.Sprintf(`select idx, value from kv_list where key = ? order by idx %s limit ?`, order)
 		args = []any{handle.key, pagesize}
 	}
 
@@ -178,11 +198,7 @@ func (handle _ListHandle) _GetStorageIdxes(ctx context.Context, page int, pagesi
 	var sql string
 	var args []any = []any{handle.key}
 	{
-		order_str := "asc"
-		if order == OrderDesc {
-			order_str = "desc"
-		}
-		sql = fmt.Sprintf(`select idx from kv_list where key = ? order by idx %s limit %d offset %d`, order_str, pagesize, (page-1)*pagesize)
+		sql = fmt.Sprintf(`select idx from kv_list where key = ? order by idx %s limit %d offset %d`, order, pagesize, (page-1)*pagesize)
 	}
 	rows, err := handle.tx.querymany(ctx, sql, args...)
 	if err != nil {
@@ -197,11 +213,7 @@ var (
 )
 
 func (handle _ListHandle) GetAll(ctx context.Context, order _OrderKind) ([]string, error) {
-	order_str := "asc"
-	if order == OrderDesc {
-		order_str = "desc"
-	}
-	sql := fmt.Sprintf(`select value from kv_list where key = ? order by idx %s`, order_str)
+	sql := fmt.Sprintf(`select value from kv_list where key = ? order by idx %s`, order)
 	rows, err := handle.tx.querymany(ctx, sql, handle.key)
 	if err != nil {
 		return nil, err
@@ -222,10 +234,10 @@ func (handle _ListHandle) Nth(ctx context.Context, idx int) (string, error) {
 	var vals []string
 	var err error
 	if idx >= 0 {
-		vals, err = handle.Get(ctx, idx+1, 1, OrderAsc)
+		vals, err = handle.Page(ctx, idx+1, 1, OrderAsc)
 	} else {
 		idx = -(idx + 1)
-		vals, err = handle.Get(ctx, idx+1, 1, OrderDesc)
+		vals, err = handle.Page(ctx, idx+1, 1, OrderDesc)
 	}
 	if err != nil {
 		return "", err
@@ -337,6 +349,7 @@ func (handle _ListHandle) InsertBefore(ctx context.Context, idx int, vals ...str
 		return err
 	}
 	if idx == 0 {
+		slices.Reverse(vals)
 		return handle.LPush(ctx, vals...)
 	}
 	bsi, err := handle.reidx(ctx, size, idx-1, idx, len(vals))
@@ -460,4 +473,82 @@ func (handle _ListHandle) InsertAfter(ctx context.Context, idx int, vals ...stri
 
 func (handle _ListHandle) remove(ctx context.Context) error {
 	return handle.tx.exec(ctx, `delete from kv_list where key = ?`, handle.key)
+}
+
+func (handle _ListHandle) Clear(ctx context.Context) error {
+	return handle.remove(ctx)
+}
+
+func (handle _ListHandle) Remove(ctx context.Context, idx int, count int) error {
+	if count < 1 {
+		return nil
+	}
+	storage_idx, err := handle._NthStorageIdx(ctx, idx)
+	if err != nil {
+		return err
+	}
+
+	// https://github.com/ncruces/go-sqlite3/issues/213
+	// return handle.tx.exec(ctx, `delete from kv_list where key = ? and idx >= ? limit ?`, handle.key, storage_idx, count)
+
+	rows, err := handle.tx.querymany(ctx, `select idx from kv_list where key = ? and  idx >= ? limit ?`, handle.key, storage_idx, count)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var idxes = make([]int, 0, count)
+	for rows.Next() {
+		var idx int
+		err = rows.Scan(&idx)
+		if err != nil {
+			return err
+		}
+		idxes = append(idxes, idx)
+	}
+	if len(idxes) < 1 {
+		return sql.ErrNoRows
+	}
+	var sb strings.Builder
+	sb.WriteByte('(')
+	for i, idx := range idxes {
+		sb.WriteString(fmt.Sprintf("%d", idx))
+		if i < len(idxes)-1 {
+			sb.WriteByte(',')
+		}
+	}
+	sb.WriteByte(')')
+	return handle.tx.exec(ctx, fmt.Sprintf(`delete from kv_list where key = ? and idx in %s`, sb.String()), handle.key)
+}
+
+func (handle _ListHandle) _Pop(ctx context.Context, order _OrderKind) (string, error) {
+	row := handle.tx.queryone(
+		ctx,
+		fmt.Sprintf(`select idx, value from kv_list where key = ? order by idx %s limit 1`, order),
+		handle.key,
+	)
+	err := row.Err()
+	if err != nil {
+		return "", err
+	}
+	var idx int
+	var val string
+	err = row.Scan(&idx, &val)
+	if err != nil {
+		return "", err
+	}
+	err = handle.tx.exec(
+		ctx,
+		`delete from kv_list where key = ? and idx = ?`,
+		handle.key, idx,
+	)
+	return val, err
+}
+
+func (handle _ListHandle) Pop(ctx context.Context) (string, error) {
+	return handle._Pop(ctx, OrderDesc)
+}
+
+func (handle _ListHandle) LPop(ctx context.Context) (string, error) {
+	return handle._Pop(ctx, OrderAsc)
 }
