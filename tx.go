@@ -21,10 +21,13 @@ func (tx *Tx) querymany(ctx context.Context, query string, args ...any) (*sql.Ro
 	return tx.raw.QueryContext(ctx, query, args...)
 }
 
-func (tx *Tx) exec(ctx context.Context, query string, args ...any) error {
+func (tx *Tx) exec(ctx context.Context, query string, args ...any) (int64, error) {
 	// fmt.Println(query, args)
-	_, err := tx.raw.ExecContext(ctx, query, args...)
-	return err
+	result, err := tx.raw.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 func (tx *Tx) addkey(ctx context.Context, key string, kind KeyKind) error {
@@ -65,10 +68,10 @@ func (tx *Tx) Exists(ctx context.Context, key string) (bool, error) {
 	return true, nil
 }
 
-func (tx *Tx) delone(ctx context.Context, key string) error {
+func (tx *Tx) delone(ctx context.Context, key string) (int64, error) {
 	kind, err := tx.Kind(ctx, key)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	switch kind {
 	case KeyKindString:
@@ -84,7 +87,7 @@ func (tx *Tx) delone(ctx context.Context, key string) error {
 			return tx.List(key).remove(ctx)
 		}
 	}
-	return fmt.Errorf("kvsqlite: del failed, %s", key)
+	return 0, fmt.Errorf("kvsqlite: del failed, %s", key)
 }
 
 func (tx *Tx) Del(ctx context.Context, keys ...string) (int, []error) {
@@ -100,7 +103,7 @@ func (tx *Tx) Del(ctx context.Context, keys ...string) (int, []error) {
 	c := 0
 	var errors []error
 	for _, key := range keys {
-		if err := tx.delone(ctx, key); err != nil {
+		if _, err := tx.delone(ctx, key); err != nil {
 			errors = append(errors, err)
 			continue
 		}

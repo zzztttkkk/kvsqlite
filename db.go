@@ -62,7 +62,7 @@ func (db *DB) _Init(ctx context.Context) error {
 		ctx,
 		`create table if not exists kv_string (
 			key text primary key not null,
-			value text not null
+			value blob not null
 		)`,
 	); err != nil {
 		return err
@@ -73,7 +73,7 @@ func (db *DB) _Init(ctx context.Context) error {
 		`create table if not exists kv_hash (
 			key text not null,
 			field text not null,
-			value text not null,
+			value blob not null,
 			primary key (key, field)
 		)`,
 	); err != nil {
@@ -85,7 +85,7 @@ func (db *DB) _Init(ctx context.Context) error {
 		`create table if not exists kv_list (
 			key text not null,
 			idx int not null,
-			value text not null,
+			value blob not null,
 			primary key (key, idx)
 		);`,
 	); err != nil {
@@ -144,6 +144,6 @@ func (db *DB) stmt(ctx context.Context, query string) (*sql.Stmt, error) {
 
 func (db *DB) ScopeCtx(ctx context.Context, fnc func(tx TxWithCtx) error) error {
 	return db.Scope(ctx, func(ctx context.Context, tx Tx) error {
-		return fnc(TxWithCtx{Tx: tx, ctx: ctx})
+		return fnc(TxWithCtx{tx: tx, ctx: ctx})
 	})
 }

@@ -90,7 +90,7 @@ func (handle _ListHandle) Size(ctx context.Context) (int, error) {
 	return lenv, err
 }
 
-func (handle _ListHandle) Page(ctx context.Context, page int, pagesize int, order _OrderKind) ([]string, error) {
+func (handle _ListHandle) Page(ctx context.Context, page int, pagesize int, order _OrderKind) ([]Value, error) {
 	if page < 1 || pagesize < 1 {
 		return nil, fmt.Errorf("kvsqlite: bad page/pagesize, %d, %d", page, pagesize)
 	}
@@ -108,10 +108,10 @@ func (handle _ListHandle) Page(ctx context.Context, page int, pagesize int, orde
 		return nil, err
 	}
 	defer rows.Close()
-	return _OneColScan[string](rows, pagesize)
+	return _OneColScan[Value](rows, pagesize)
 }
 
-func (handle _ListHandle) _ReadByCursor(ctx context.Context, order _OrderKind, pagesize int, previdx sql.Null[int]) ([]string, sql.Null[int], error) {
+func (handle _ListHandle) _ReadByCursor(ctx context.Context, order _OrderKind, pagesize int, previdx sql.Null[int]) ([]Value, sql.Null[int], error) {
 	if pagesize < 1 {
 		pagesize = 10
 	}
@@ -136,10 +136,10 @@ func (handle _ListHandle) _ReadByCursor(ctx context.Context, order _OrderKind, p
 	}
 	defer rows.Close()
 
-	var vals []string
+	var vals []Value
 	var storage_idx sql.Null[int]
 	for rows.Next() {
-		var tmp string
+		var tmp Value
 		err = rows.Scan(&storage_idx, &tmp)
 		if err != nil {
 			return nil, sql.Null[int]{}, err
@@ -149,24 +149,24 @@ func (handle _ListHandle) _ReadByCursor(ctx context.Context, order _OrderKind, p
 	return vals, storage_idx, nil
 }
 
-func (handle _ListHandle) AscStream(ctx context.Context, pagesize int, previdx sql.Null[int]) ([]string, sql.Null[int], error) {
+func (handle _ListHandle) AscStream(ctx context.Context, pagesize int, previdx sql.Null[int]) ([]Value, sql.Null[int], error) {
 	return handle._ReadByCursor(ctx, OrderAsc, pagesize, previdx)
 }
 
-func (handle _ListHandle) DescStream(ctx context.Context, pagesize int, previdx sql.Null[int]) ([]string, sql.Null[int], error) {
+func (handle _ListHandle) DescStream(ctx context.Context, pagesize int, previdx sql.Null[int]) ([]Value, sql.Null[int], error) {
 	return handle._ReadByCursor(ctx, OrderDesc, pagesize, previdx)
 }
 
-func (handle _ListHandle) _Each(ctx context.Context, order _OrderKind, pagesize int) iter.Seq2[string, error] {
-	return func(yield func(string, error) bool) {
-		var vals []string
+func (handle _ListHandle) _Each(ctx context.Context, order _OrderKind, pagesize int) iter.Seq2[Value, error] {
+	return func(yield func(Value, error) bool) {
+		var vals []Value
 		var previdx sql.Null[int]
 		var err error
 
 		for {
 			vals, previdx, err = handle._ReadByCursor(ctx, order, pagesize, previdx)
 			if err != nil {
-				yield("", err)
+				yield(Value{}, err)
 				return
 			}
 			if len(vals) < 1 {
@@ -183,11 +183,11 @@ func (handle _ListHandle) _Each(ctx context.Context, order _OrderKind, pagesize 
 	}
 }
 
-func (handle _ListHandle) AscSeq(ctx context.Context, pagesize int) iter.Seq2[string, error] {
+func (handle _ListHandle) AscSeq(ctx context.Context, pagesize int) iter.Seq2[Value, error] {
 	return handle._Each(ctx, OrderAsc, pagesize)
 }
 
-func (handle _ListHandle) DescSeq(ctx context.Context, pagesize int) iter.Seq2[string, error] {
+func (handle _ListHandle) DescSeq(ctx context.Context, pagesize int) iter.Seq2[Value, error] {
 	return handle._Each(ctx, OrderDesc, pagesize)
 }
 
@@ -212,26 +212,26 @@ var (
 	ErrBadIdx = errors.New("kvsqlite: bad idx")
 )
 
-func (handle _ListHandle) GetAll(ctx context.Context, order _OrderKind) ([]string, error) {
+func (handle _ListHandle) GetAll(ctx context.Context, order _OrderKind) ([]Value, error) {
 	sql := fmt.Sprintf(`select value from kv_list where key = ? order by idx %s`, order)
 	rows, err := handle.tx.querymany(ctx, sql, handle.key)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	return _OneColScan[string](rows, 0)
+	return _OneColScan[Value](rows, 0)
 }
 
-func (handle _ListHandle) First(ctx context.Context) (string, error) {
+func (handle _ListHandle) First(ctx context.Context) (Value, error) {
 	return handle.Nth(ctx, 0)
 }
 
-func (handle _ListHandle) Last(ctx context.Context) (string, error) {
+func (handle _ListHandle) Last(ctx context.Context) (Value, error) {
 	return handle.Nth(ctx, -1)
 }
 
-func (handle _ListHandle) Nth(ctx context.Context, idx int) (string, error) {
-	var vals []string
+func (handle _ListHandle) Nth(ctx context.Context, idx int) (Value, error) {
+	var vals []Value
 	var err error
 	if idx >= 0 {
 		vals, err = handle.Page(ctx, idx+1, 1, OrderAsc)
@@ -240,10 +240,10 @@ func (handle _ListHandle) Nth(ctx context.Context, idx int) (string, error) {
 		vals, err = handle.Page(ctx, idx+1, 1, OrderDesc)
 	}
 	if err != nil {
-		return "", err
+		return Value{}, err
 	}
 	if len(vals) < 1 {
-		return "", ErrBadIdx
+		return Value{}, ErrBadIdx
 	}
 	return vals[0], nil
 }
@@ -270,7 +270,7 @@ func (handle _ListHandle) insertstmt(ctx context.Context) (*sql.Stmt, error) {
 	return handle.tx.stmt(ctx, `insert into kv_list (key, idx, value) values (?, ?, ?)`)
 }
 
-func (handle _ListHandle) execinset(ctx context.Context, stmt *sql.Stmt, storageidx int, value string) error {
+func (handle _ListHandle) execinset(ctx context.Context, stmt *sql.Stmt, storageidx int, value Value) error {
 	_, err := stmt.ExecContext(ctx, handle.key, storageidx, value)
 	return err
 }
@@ -284,7 +284,7 @@ func (handle _ListHandle) execreidx(ctx context.Context, stmt *sql.Stmt, prev, c
 	return err
 }
 
-func (handle _ListHandle) _DoPush(ctx context.Context, idx int, step int, vals ...string) error {
+func (handle _ListHandle) _DoPush(ctx context.Context, idx int, step int, vals ...Value) error {
 	err := handle.ensurekey(ctx)
 	if err != nil {
 		return err
@@ -311,11 +311,11 @@ func (handle _ListHandle) _DoPush(ctx context.Context, idx int, step int, vals .
 	return nil
 }
 
-func (handle _ListHandle) Push(ctx context.Context, vals ...string) error {
+func (handle _ListHandle) Push(ctx context.Context, vals ...Value) error {
 	return handle._DoPush(ctx, -1, KeySetp, vals...)
 }
 
-func (handle _ListHandle) LPush(ctx context.Context, vals ...string) error {
+func (handle _ListHandle) LPush(ctx context.Context, vals ...Value) error {
 	return handle._DoPush(ctx, 0, -KeySetp, vals...)
 }
 
@@ -343,7 +343,7 @@ func (handle _ListHandle) fixidx(ctx context.Context, idx int) (int, int, error)
 	return size, idx, nil
 }
 
-func (handle _ListHandle) InsertBefore(ctx context.Context, idx int, vals ...string) error {
+func (handle _ListHandle) InsertBefore(ctx context.Context, idx int, vals ...Value) error {
 	size, idx, err := handle.fixidx(ctx, idx)
 	if err != nil {
 		return err
@@ -445,7 +445,7 @@ func (handle _ListHandle) reidx(ctx context.Context, size int, lidx int, ridx in
 	return insert_storage_idx_begin, consume_tmps()
 }
 
-func (handle _ListHandle) InsertAfter(ctx context.Context, idx int, vals ...string) error {
+func (handle _ListHandle) InsertAfter(ctx context.Context, idx int, vals ...Value) error {
 	size, idx, err := handle.fixidx(ctx, idx)
 	if err != nil {
 		return err
@@ -471,21 +471,21 @@ func (handle _ListHandle) InsertAfter(ctx context.Context, idx int, vals ...stri
 	return nil
 }
 
-func (handle _ListHandle) remove(ctx context.Context) error {
+func (handle _ListHandle) remove(ctx context.Context) (int64, error) {
 	return handle.tx.exec(ctx, `delete from kv_list where key = ?`, handle.key)
 }
 
-func (handle _ListHandle) Clear(ctx context.Context) error {
+func (handle _ListHandle) Clear(ctx context.Context) (int64, error) {
 	return handle.remove(ctx)
 }
 
-func (handle _ListHandle) Remove(ctx context.Context, idx int, count int) error {
+func (handle _ListHandle) Remove(ctx context.Context, idx int, count int) (int64, error) {
 	if count < 1 {
-		return nil
+		return 0, nil
 	}
 	storage_idx, err := handle._NthStorageIdx(ctx, idx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// https://github.com/ncruces/go-sqlite3/issues/213
@@ -494,7 +494,7 @@ func (handle _ListHandle) Remove(ctx context.Context, idx int, count int) error 
 
 	rows, err := handle.tx.querymany(ctx, `select idx from kv_list where key = ? and  idx >= ? limit ?`, handle.key, storage_idx, count)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer rows.Close()
 
@@ -503,12 +503,12 @@ func (handle _ListHandle) Remove(ctx context.Context, idx int, count int) error 
 		var idx int
 		err = rows.Scan(&idx)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		idxes = append(idxes, idx)
 	}
 	if len(idxes) < 1 {
-		return sql.ErrNoRows
+		return 0, sql.ErrNoRows
 	}
 	var sb strings.Builder
 	sb.WriteByte('(')
@@ -522,7 +522,7 @@ func (handle _ListHandle) Remove(ctx context.Context, idx int, count int) error 
 	return handle.tx.exec(ctx, fmt.Sprintf(`delete from kv_list where key = ? and idx in %s`, sb.String()), handle.key)
 }
 
-func (handle _ListHandle) _Pop(ctx context.Context, order _OrderKind) (string, error) {
+func (handle _ListHandle) _Pop(ctx context.Context, order _OrderKind) (Value, error) {
 	row := handle.tx.queryone(
 		ctx,
 		fmt.Sprintf(`select idx, value from kv_list where key = ? order by idx %s limit 1`, order),
@@ -530,15 +530,15 @@ func (handle _ListHandle) _Pop(ctx context.Context, order _OrderKind) (string, e
 	)
 	err := row.Err()
 	if err != nil {
-		return "", err
+		return Value{}, err
 	}
 	var idx int
-	var val string
+	var val Value
 	err = row.Scan(&idx, &val)
 	if err != nil {
-		return "", err
+		return Value{}, err
 	}
-	err = handle.tx.exec(
+	_, err = handle.tx.exec(
 		ctx,
 		`delete from kv_list where key = ? and idx = ?`,
 		handle.key, idx,
@@ -546,10 +546,10 @@ func (handle _ListHandle) _Pop(ctx context.Context, order _OrderKind) (string, e
 	return val, err
 }
 
-func (handle _ListHandle) Pop(ctx context.Context) (string, error) {
+func (handle _ListHandle) Pop(ctx context.Context) (Value, error) {
 	return handle._Pop(ctx, OrderDesc)
 }
 
-func (handle _ListHandle) LPop(ctx context.Context) (string, error) {
+func (handle _ListHandle) LPop(ctx context.Context) (Value, error) {
 	return handle._Pop(ctx, OrderAsc)
 }

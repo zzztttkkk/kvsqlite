@@ -1,3 +1,8 @@
 {
-  "go.testFlags": ["-v", "-count=1"]
+  "go.testFlags": [
+    "-v",
+    "-count=1"
+  ],
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.typeCheckingMode": "basic"
 }
