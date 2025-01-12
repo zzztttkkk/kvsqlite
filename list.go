@@ -489,6 +489,7 @@ func (handle _ListHandle) Remove(ctx context.Context, idx int, count int) error 
 	}
 
 	// https://github.com/ncruces/go-sqlite3/issues/213
+	// TODO mkae a custom sqlite.wasm
 	// return handle.tx.exec(ctx, `delete from kv_list where key = ? and idx >= ? limit ?`, handle.key, storage_idx, count)
 
 	rows, err := handle.tx.querymany(ctx, `select idx from kv_list where key = ? and  idx >= ? limit ?`, handle.key, storage_idx, count)
