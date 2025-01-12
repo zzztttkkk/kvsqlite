@@ -11,6 +11,10 @@ type TxWithCtx struct {
 	ctx context.Context
 }
 
+func (tx *TxWithCtx) Ctx() context.Context {
+	return tx.ctx
+}
+
 func (tx *TxWithCtx) Kind(key string) (KeyKind, error) {
 	return tx.Tx.Kind(tx.ctx, key)
 }
