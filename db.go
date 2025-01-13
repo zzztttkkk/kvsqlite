@@ -144,6 +144,6 @@ func (db *DB) stmt(ctx context.Context, query string) (*sql.Stmt, error) {
 
 func (db *DB) ScopeCtx(ctx context.Context, fnc func(tx TxWithCtx) error) error {
 	return db.Scope(ctx, func(ctx context.Context, tx Tx) error {
-		return fnc(TxWithCtx{tx: tx, ctx: ctx})
+		return fnc(TxWithCtx{Tx: tx, ctx: ctx})
 	})
 }

@@ -12,20 +12,20 @@ type _StringHandleWithCtx struct{
     ctx context.Context
 }
 
-func (tx TxWithCtx) String() _StringHandleWithCtx {
+func (tx TxWithCtx) String(key string) _StringHandleWithCtx {
 return _StringHandleWithCtx{
-    _StringHandle: tx.tx.String(),
+    _StringHandle: tx.Tx.String(key),
     ctx: tx.ctx,
 }
 }
-func (handle _StringHandleWithCtx) Get (key string) (Value, error) {
-    return handle._StringHandle.Get(handle.ctx , key)  
+func (handle _StringHandleWithCtx) Get () (Value, error) {
+    return handle._StringHandle.Get(handle.ctx)  
 }
-func (handle _StringHandleWithCtx) Set (key string, val Value) error {
-    return handle._StringHandle.Set(handle.ctx , key, val)  
+func (handle _StringHandleWithCtx) Set (val Value) error {
+    return handle._StringHandle.Set(handle.ctx , val)  
 }
-func (handle _StringHandleWithCtx) Incr (key string, amount int64) (int64, error) {
-    return handle._StringHandle.Incr(handle.ctx , key, amount)  
+func (handle _StringHandleWithCtx) Incr (amount int64) (int64, error) {
+    return handle._StringHandle.Incr(handle.ctx , amount)  
 }
 type _HashHandleWithCtx struct{
     _HashHandle
@@ -34,7 +34,7 @@ type _HashHandleWithCtx struct{
 
 func (tx TxWithCtx) Hash(key string) _HashHandleWithCtx {
 return _HashHandleWithCtx{
-    _HashHandle: tx.tx.Hash(key),
+    _HashHandle: tx.Tx.Hash(key),
     ctx: tx.ctx,
 }
 }
@@ -53,8 +53,8 @@ func (handle _HashHandleWithCtx) Size () (int, error) {
 func (handle _HashHandleWithCtx) Items () (map[string]Value, error) {
     return handle._HashHandle.Items(handle.ctx)  
 }
-func (handle _HashHandleWithCtx) Set (filed string, val Value) error {
-    return handle._HashHandle.Set(handle.ctx , filed, val)  
+func (handle _HashHandleWithCtx) Set (field string, val Value) error {
+    return handle._HashHandle.Set(handle.ctx , field, val)  
 }
 func (handle _HashHandleWithCtx) SetAll (vmap map[string]Value) error {
     return handle._HashHandle.SetAll(handle.ctx , vmap)  
@@ -75,7 +75,7 @@ type _ListHandleWithCtx struct{
 
 func (tx TxWithCtx) List(key string) _ListHandleWithCtx {
 return _ListHandleWithCtx{
-    _ListHandle: tx.tx.List(key),
+    _ListHandle: tx.Tx.List(key),
     ctx: tx.ctx,
 }
 }

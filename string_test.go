@@ -20,8 +20,8 @@ func TestStringHandle(t *testing.T) {
 	defer db.Close()
 
 	err := db.Scope(context.Background(), func(ctx context.Context, tx Tx) error {
-		fmt.Println(tx.String().Set(ctx, "aaa", String("1w2")))
-		fmt.Println(tx.String().Incr(ctx, "xxx", -7))
+		fmt.Println(tx.String("aaa").Set(ctx, String("1w2")))
+		fmt.Println(tx.String("xxx").Incr(ctx, -7))
 		return nil
 	})
 	fmt.Println(err)

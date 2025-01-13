@@ -3,7 +3,7 @@ package kvsqlite
 import "context"
 
 type TxWithCtx struct {
-	tx  Tx
+	Tx
 	ctx context.Context
 }
 

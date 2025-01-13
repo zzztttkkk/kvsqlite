@@ -98,18 +98,16 @@ def read_methods(fp: str, typename: str) -> list[Method]:
         return methods
 
 
-def gen_onetype(
-    f: "TextIOBase", name: str, args: str, argv: str, fp: str, typename: str
-):
+def gen_onetype(f: "TextIOBase", name: str, fp: str, typename: str):
     methods = read_methods(fp, typename)
     head = f"""type {typename}WithCtx struct{{
     {typename}
     ctx context.Context
 }}
 
-func (tx TxWithCtx) {name}({args}) {typename}WithCtx {{
+func (tx TxWithCtx) {name}(key string) {typename}WithCtx {{
 return {typename}WithCtx{{
-    {typename}: tx.tx.{name}({argv}),
+    {typename}: tx.Tx.{name}(key),
     ctx: tx.ctx,
 }}
 }}
@@ -160,6 +158,6 @@ import (
 )
             
 """)
-    gen_onetype(f, "String", "", "", "string.go", "_StringHandle")
-    gen_onetype(f, "Hash", "key string", "key", "hash.go", "_HashHandle")
-    gen_onetype(f, "List", "key string", "key", "list.go", "_ListHandle")
+    gen_onetype(f, "String", "string.go", "_StringHandle")
+    gen_onetype(f, "Hash", "hash.go", "_HashHandle")
+    gen_onetype(f, "List", "list.go", "_ListHandle")

@@ -76,7 +76,7 @@ func (tx *Tx) delone(ctx context.Context, key string) (int64, error) {
 	switch kind {
 	case KeyKindString:
 		{
-			return tx.String().delone(ctx, key)
+			return tx.String(key).delone(ctx)
 		}
 	case KeyKindHash:
 		{
