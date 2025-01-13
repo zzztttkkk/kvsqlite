@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.com/ncruces/go-sqlite3 v0.21.3
-	github.com/zzztttkkk/lion v0.2.11-0.20250113034606-5b686de5df60
+	github.com/zzztttkkk/lion v0.2.11-0.20250113152925-87529e71f237
 )
 
 require (
