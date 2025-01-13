@@ -98,18 +98,18 @@ func (db *DB) Close() error {
 	return db.raw.Close()
 }
 
-func (db *DB) Scope(ctx context.Context, fnc func(ctx context.Context, tx Tx) error) error {
-	sqltx, err := db.raw.Begin()
+func (db *DB) Scope(ctx context.Context, fnc func(ctx context.Context, tx Tx) error) (err error) {
+	var sqltx *sql.Tx
+	sqltx, err = db.raw.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() {
 		errored := err != nil
-		recoverd := false
 		if ra := recover(); ra != nil {
 			errored = true
-			recoverd = true
 			err = fmt.Errorf("kvsqlite: tx scope recoverd error, %v", ra)
+			defer panic(ra)
 		}
 		if errored {
 			rollback_err := sqltx.Rollback()
@@ -121,9 +121,6 @@ func (db *DB) Scope(ctx context.Context, fnc func(ctx context.Context, tx Tx) er
 		commit_err := sqltx.Commit()
 		if commit_err != nil {
 			panic(fmt.Errorf("kvsqlite: commit failed, %s", commit_err))
-		}
-		if recoverd {
-			panic(err)
 		}
 	}()
 	err = fnc(ctx, Tx{raw: sqltx, db: db})
