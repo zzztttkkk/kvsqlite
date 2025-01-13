@@ -16,21 +16,7 @@ type DB struct {
 	stmts map[string]*sql.Stmt
 }
 
-var (
-	lock      sync.Mutex
-	instances = map[string]*DB{}
-)
-
 func OpenDB(ctx context.Context, fp string) (*DB, error) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if fp != ":memory:" {
-		pv, ok := instances[fp]
-		if ok {
-			return pv, nil
-		}
-	}
 	db, err := sql.Open("sqlite3", fp)
 	if err != nil {
 		return nil, err
@@ -40,7 +26,6 @@ func OpenDB(ctx context.Context, fp string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	instances[fp] = obj
 	return obj, nil
 }
 
