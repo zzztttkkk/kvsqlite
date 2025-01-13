@@ -60,12 +60,12 @@ func (v *Value) Scan(src any) error {
 	switch tv := src.(type) {
 	case []byte:
 		{
-			v.Bytes = tv
+			v.Bytes = append(v.Bytes, tv...)
 			return nil
 		}
 	default:
 		{
-			return fmt.Errorf("")
+			return fmt.Errorf("kvsqlite: bad value column type")
 		}
 	}
 }
@@ -75,7 +75,7 @@ func (v Value) Value() (driver.Value, error) {
 }
 
 func (v *Value) String() string {
-	return unsafe.String(unsafe.SliceData(v.Bytes), len(v.Bytes))
+	return b2s(v.Bytes)
 }
 
 func (v *Value) Int64() (int64, error) {
