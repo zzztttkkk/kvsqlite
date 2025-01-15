@@ -42,8 +42,24 @@ func JSON(v any) (Value, error) {
 	return Value{Bytes: bs}, nil
 }
 
+func JSONIdent(v any) (Value, error) {
+	bs, err := json.Marshal(v)
+	if err != nil {
+		return Value{}, err
+	}
+	return Value{Bytes: bs}, nil
+}
+
 func MustJSON(v any) Value {
 	val, err := JSON(v)
+	if err != nil {
+		panic(err)
+	}
+	return val
+}
+
+func MustJSONIdent(v any) Value {
+	val, err := JSONIdent(v)
 	if err != nil {
 		panic(err)
 	}
@@ -84,4 +100,8 @@ func (v *Value) Int64() (int64, error) {
 
 func (v *Value) Bool() (bool, error) {
 	return strconv.ParseBool(v.String())
+}
+
+func (v *Value) UnmarshalJSON(dst any) error {
+	return json.Unmarshal(v.Bytes, dst)
 }
