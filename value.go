@@ -43,7 +43,7 @@ func JSON(v any) (Value, error) {
 }
 
 func JSONIdent(v any) (Value, error) {
-	bs, err := json.Marshal(v)
+	bs, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return Value{}, err
 	}
