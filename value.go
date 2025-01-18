@@ -79,6 +79,11 @@ func (v *Value) Scan(src any) error {
 			v.Bytes = append(v.Bytes, tv...)
 			return nil
 		}
+	case string:
+		{
+			v.Bytes = append(v.Bytes, s2b(tv)...)
+			return nil
+		}
 	default:
 		{
 			return fmt.Errorf("kvsqlite: bad value column type")
@@ -100,8 +105,4 @@ func (v *Value) Int64() (int64, error) {
 
 func (v *Value) Bool() (bool, error) {
 	return strconv.ParseBool(v.String())
-}
-
-func (v *Value) UnmarshalJSON(dst any) error {
-	return json.Unmarshal(v.Bytes, dst)
 }
