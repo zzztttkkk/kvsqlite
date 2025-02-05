@@ -2,10 +2,7 @@ module github.com/zzztttkkk/kvsqlite
 
 go 1.23.4
 
-require (
-	github.com/ncruces/go-sqlite3 v0.21.3
-	github.com/zzztttkkk/lion v0.2.11
-)
+require github.com/ncruces/go-sqlite3 v0.21.3
 
 require (
 	github.com/ncruces/julianday v1.0.0 // indirect

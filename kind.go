@@ -1,7 +1,6 @@
 package kvsqlite
 
-import "github.com/zzztttkkk/lion/enums"
-
+//go:generate stringer -type KeyKind -trimprefix "KeyKind"
 type KeyKind int
 
 const (
@@ -10,11 +9,3 @@ const (
 	KeyKindHash
 	KeyKindList
 )
-
-func init() {
-	enums.Generate(func() *enums.Options[KeyKind] {
-		return &enums.Options[KeyKind]{
-			RemoveCommonPrefix: true,
-		}
-	})
-}
