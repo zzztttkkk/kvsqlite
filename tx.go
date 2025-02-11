@@ -124,3 +124,5 @@ func (tx *Tx) stmt(ctx context.Context, query string) (*sql.Stmt, error) {
 	}
 	return tx.raw.StmtContext(ctx, stmt), nil
 }
+
+//go:generate python ./gen.py
