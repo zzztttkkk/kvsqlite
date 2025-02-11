@@ -64,9 +64,9 @@ func _OneColScan[T any](rows *sql.Rows, pagesize int) ([]T, error) {
 	if pagesize > 0 {
 		lst = make([]T, 0, pagesize)
 	}
-	var tmp T
 	var err error
 	for rows.Next() {
+		var tmp T
 		err = rows.Scan(&tmp)
 		if err != nil {
 			return nil, err

@@ -76,9 +76,10 @@ func (handle _HashHandle) Items(ctx context.Context) (map[string]Value, error) {
 	defer rows.Close()
 
 	var vmap = map[string]Value{}
-	var key string
-	var val Value
+
 	for rows.Next() {
+		var key string
+		var val Value
 		err = rows.Scan(&key, &val)
 		if err != nil {
 			return nil, err
@@ -182,8 +183,8 @@ func (handle _HashHandle) Keys(ctx context.Context) ([]string, error) {
 	defer rows.Close()
 
 	var keys []string
-	var tmp string
 	for rows.Next() {
+		var tmp string
 		err = rows.Scan(&tmp)
 		if err != nil {
 			return nil, err
