@@ -41,7 +41,7 @@ func (tx *Tx) ensurekind(ctx context.Context, expected KeyKind, key string) erro
 		return err
 	}
 	if kind != expected {
-		return fmt.Errorf("kvsqlite: bad key kind, expected %s, but it is a %s", expected, kind)
+		return fmt.Errorf("kvsqlite: bad key kind, expected %s, but it is a %s", expected.String(), kind.String())
 	}
 	return nil
 }
