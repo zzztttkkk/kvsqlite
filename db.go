@@ -29,6 +29,10 @@ func OpenDB(ctx context.Context, fp string) (*DB, error) {
 	return obj, nil
 }
 
+func (db *DB) SqlDB() *sql.DB {
+	return db.raw
+}
+
 func (db *DB) _Init(ctx context.Context) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
