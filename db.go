@@ -37,7 +37,13 @@ func (db *DB) _Init(ctx context.Context) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	if _, err := db.raw.ExecContext(
+	tx, err := db.raw.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Commit()
+
+	if _, err := tx.ExecContext(
 		ctx,
 		`create table if not exists kv_index (
 			key text primary key not null,
@@ -47,7 +53,7 @@ func (db *DB) _Init(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := db.raw.ExecContext(
+	if _, err := tx.ExecContext(
 		ctx,
 		`create table if not exists kv_string (
 			key text primary key not null,
@@ -57,7 +63,7 @@ func (db *DB) _Init(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := db.raw.ExecContext(
+	if _, err := tx.ExecContext(
 		ctx,
 		`create table if not exists kv_hash (
 			key text not null,
@@ -69,7 +75,7 @@ func (db *DB) _Init(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := db.raw.ExecContext(
+	if _, err := tx.ExecContext(
 		ctx,
 		`create table if not exists kv_list (
 			key text not null,
